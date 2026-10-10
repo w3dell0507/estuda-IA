@@ -7,13 +7,11 @@ from groq import Groq
 load_dotenv()
 
 # Configuração da página do Streamlit
-# Configuração da página do Streamlit
 st.set_page_config(
     page_title="EstudaAI - Agente de Estudos",
     page_icon="🎓",
     layout="wide"
 )
-
 
 # Inicialização da chave da API Groq
 api_key = os.environ.get("GROQ_API_KEY")
@@ -28,6 +26,7 @@ client = Groq(api_key=api_key)
 st.sidebar.title("🎓 EstudaAI")
 st.sidebar.markdown("Seu tutor inteligente para otimizar aprendizado e rotina.")
 
+# Seletor de Modo
 modo = st.sidebar.selectbox(
     "Escolha o modo de atendimento:",
     [
@@ -39,39 +38,45 @@ modo = st.sidebar.selectbox(
     ]
 )
 
+# NOVO: Seletor de Nível de Dificuldade
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **Dica:** Escolha um modo para receber respostas personalizadas!")
+nivel = st.sidebar.selectbox(
+    "Escolha o nível de complexidade:",
+    [
+        "Fácil (Iniciante / Didático)",
+        "Médio (Intermediário / Padrão)",
+        "Difícil (Avançado / Técnico e Aprofundado)"
+    ]
+)
 
-# PROMPTS DO SISTEMA DE ACORDO COM O MODO SELECIONADO (Engenharia de Prompt)
+st.sidebar.markdown("---")
+st.sidebar.info("💡 **Dica:** O nível escolhido ajusta automaticamente a profundidade das respostas da IA!")
+
+# PROMPTS DO SISTEMA DE ACORDO COM O MODO E O NÍVEL SELECIONADO
 PROMPTS_SISTEMA = {
     "Explicar Conceito Simplificado (ELI5)": (
-        "Você é um tutor acadêmico extremamente didático e paciente. "
-        "Sua tarefa é explicar qualquer assunto de forma simples, usando metáforas do dia a dia, "
-        "de modo que até um iniciante consiga entender facilmente."
+        f"Você é um tutor acadêmico extremamente didático. O nível de complexidade desejado para a explicação é: {nivel}. "
+        "Explique o assunto de acordo com este nível (se fácil, use muitas metáforas simples; se difícil, use termos técnicos rigurosos)."
     ),
     "Gerar Resumo Focado": (
-        "Você é um especialista em síntese e técnicas de estudo. "
-        "Receba um tópico ou texto e gere um resumo estruturado contendo: "
-        "1. Conceitos Chave (em tópicos); 2. Pontos de Atenção; 3. Conclusão Principal."
+        f"Você é um especialista em síntese. O nível do resumo deve ser: {nivel}. "
+        "Gere um resumo estruturado contendo: 1. Conceitos Chave; 2. Pontos de Atenção; 3. Conclusão Principal."
     ),
     "Criar Quiz de Fixação (3 Perguntas)": (
-        "Você é um elaborador de exames focado em metodologias ativas. "
-        "Gere um quiz com 3 perguntas de múltipla escolha (A, B, C, D) sobre o tema enviado. "
-        "No final do texto, forneça o gabarito comentado de cada questão."
+        f"Você é um elaborador de exames. Crie um quiz com 3 perguntas de múltipla escolha (A, B, C, D) "
+        f"com o grau de dificuldade adequado ao nível: {nivel}. No final, forneça o gabarito comentado."
     ),
     "Planejar Rotina de Estudos": (
-        "Você é um especialista em produtividade e cronogramas de estudo (método Pomodoro, repetição espaçada). "
-        "Crie um plano prático, passo a passo e organizado por horários/dias com base na solicitação do usuário."
+        f"Você é um especialista em produtividade. Crie um plano de estudos prático, estruturado e com foco no nível: {nivel}."
     ),
     "Dúvida Livre": (
-        "Você é um assistente acadêmico polivalente. Responda com precisão, "
-        "clareza e bom tom pedagógico a qualquer dúvida apresentada."
+        f"Você é um assistente acadêmico polivalente. Responda à dúvida do usuário adaptando a profundidade da resposta para o nível: {nivel}."
     )
 }
 
 # ----- CORPO PRINCIPAL DA APLICAÇÃO -----
 st.title("🎓 EstudaAI — Tutor Inteligente")
-st.caption(f"Modo atual: **{modo}**")
+st.caption(f"Modo atual: **{modo}** | Nível selecionado: **{nivel}**")
 
 # Inicialização do histórico de mensagens na sessão
 if "messages" not in st.session_state:
@@ -89,7 +94,7 @@ if prompt := st.chat_input("Digite o assunto, pergunta ou texto para análise...
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Prepara a chamada para a API com a engenharia de prompt
+    # Prepara a chamada para a API com a engenharia de prompt atualizada com o nível
     system_message = {"role": "system", "content": PROMPTS_SISTEMA[modo]}
     user_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
     
